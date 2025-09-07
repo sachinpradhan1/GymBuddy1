@@ -10,6 +10,43 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Welcome Overlay -->
+  <div class="welcome-overlay" id="welcome-overlay">
+    <div class="welcome-content">
+      <div class="welcome-hero">
+        <div class="welcome-logo">
+          <div class="logo-animation">
+            <i class="fas fa-bolt"></i>
+          </div>
+        </div>
+        <h1 class="welcome-title">Welcome to FitTracker AI</h1>
+        <p class="welcome-subtitle">Your Personal AI Fitness Coach</p>
+        <div class="welcome-features">
+          <div class="feature-highlight">
+            <i class="fas fa-eye"></i>
+            <span>AI Pose Detection</span>
+          </div>
+          <div class="feature-highlight">
+            <i class="fas fa-chart-line"></i>
+            <span>Progress Tracking</span>
+          </div>
+          <div class="feature-highlight">
+            <i class="fas fa-trophy"></i>
+            <span>Achievements</span>
+          </div>
+        </div>
+        <button class="btn-get-started" id="get-started-btn">
+          <span>Get Started</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+        <div class="welcome-privacy">
+          <i class="fas fa-shield-alt"></i>
+          <span>Your data stays private - everything runs locally</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="app">
     <!-- Header -->
     <header class="header">
@@ -98,7 +135,7 @@
               <i class="fas fa-hand-point-up"></i>
             </div>
             <div class="exercise-details">
-              <h3>Push-ups</h3>
+              <h3>Push ups</h3>
               <p>Chest & triceps</p>
               <div class="exercise-meta">
                 <span><i class="fas fa-fire"></i> 0.7 cal/rep</span>
@@ -179,9 +216,14 @@
         <div class="camera-section">
           <div class="camera-header">
             <h3>Live Workout</h3>
-            <button class="btn-icon" id="focus-mode-btn" title="Focus Mode">
-              <i class="fas fa-expand"></i>
-            </button>
+            <div class="camera-controls">
+              <button class="btn-icon" id="focus-mode-btn" title="Focus Mode">
+                <i class="fas fa-expand"></i>
+              </button>
+              <button class="exit-focus-btn" id="exit-focus-btn" style="display: none;">
+                <i class="fas fa-compress"></i> Exit Focus
+              </button>
+            </div>
           </div>
           <div class="camera-container">
             <video id="video"></video>
@@ -259,6 +301,24 @@
     <footer class="footer">
       <p>Powered by <a href="https://www.linkedin.com/in/sachin-pradhan-ba82a927a" target="_blank" rel="noopener noreferrer">Sachin Pradhan</a></p>
     </footer>
+  </div>
+
+  <!-- Floating Action Button -->
+  <div class="fab-container" id="fab-container">
+    <button class="fab-main" id="fab-main">
+      <i class="fas fa-plus"></i>
+    </button>
+    <div class="fab-actions" id="fab-actions">
+      <button class="fab-action" id="quick-start" title="Quick Start">
+        <i class="fas fa-play"></i>
+      </button>
+      <button class="fab-action" id="voice-command" title="Voice Commands">
+        <i class="fas fa-microphone"></i>
+      </button>
+      <button class="fab-action" id="help-tips" title="Tips & Help">
+        <i class="fas fa-lightbulb"></i>
+      </button>
+    </div>
   </div>
 
   <!-- Demo Modal -->
