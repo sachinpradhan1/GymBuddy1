@@ -61,6 +61,14 @@ const levelTitleElement = document.getElementById("level-title");
 const levelFillElement = document.getElementById("level-fill");
 const currentXpElement = document.getElementById("current-xp");
 const nextLevelXpElement = document.getElementById("next-level-xp");
+const welcomeOverlay = document.getElementById("welcome-overlay");
+const getStartedBtn = document.getElementById("get-started-btn");
+const fabContainer = document.getElementById("fab-container");
+const fabMain = document.getElementById("fab-main");
+const quickStartBtn = document.getElementById("quick-start");
+const voiceCommandBtn = document.getElementById("voice-command");
+const helpTipsBtn = document.getElementById("help-tips");
+const exitFocusBtn = document.getElementById("exit-focus-btn");
 
 // Variables for rep counting
 let repCount = 0;
@@ -119,7 +127,7 @@ const demoVideos = {
 const exerciseData = {
   curl: { name: "bicep curls", calories: 0.5, type: "reps" },
   squat: { name: "squats", calories: 0.8, type: "reps" },
-  pushup: { name: "push-ups", calories: 0.7, type: "reps" },
+  pushup: { name: "push ups", calories: 0.7, type: "reps" },
   shoulderpress: { name: "shoulder press", calories: 0.6, type: "reps" },
   jumpingjack: { name: "jumping jacks", calories: 0.9, type: "reps" },
   lunge: { name: "lunges", calories: 0.7, type: "reps" },
@@ -1370,9 +1378,10 @@ function nextProgramExercise() {
   if (programExerciseIndex >= currentProgram.exercises.length) {
     // Program completed
     isFollowingProgram = false;
+    const programName = currentProgram.name;
     currentProgram = null;
-    updateFeedback("Program Complete!", `🎉 Congratulations! You've completed the entire ${currentProgram?.name || 'workout'} program!`, "fas fa-trophy");
-    speak(`Outstanding! You've completed the entire workout program! You're absolutely incredible!`);
+    updateFeedback("Program Complete!", `Congratulations! You've completed the entire ${programName} program!`, "fas fa-trophy");
+    speak(`Outstanding! You have completed the entire ${programName} workout program! You are absolutely incredible!`);
     return;
   }
   
@@ -1388,14 +1397,25 @@ function nextProgramExercise() {
     targetCard.classList.add('active');
   }
   
-  resetSession();
+  // Reset session but keep program state
+  repCount = 0;
+  sessionCalories = 0;
+  direction = "down";
+  formScore = 100;
+  plankStartTime = null;
+  plankCurrentTime = 0;
+  burpeeStage = 'standing';
+  workoutState = camera ? 'preparing' : 'idle';
+  
+  updateStats();
+  updateFormScore(100);
   
   const exerciseName = exerciseData[currentExercise].name;
   const unit = currentExercise === 'plank' ? 'seconds' : 'reps';
-  const progress = `Exercise ${programExerciseIndex + 1}/${currentProgram.exercises.length}`;
+  const progress = `Exercise ${programExerciseIndex + 1} of ${currentProgram.exercises.length}`;
   
   updateFeedback("Next Exercise", `${progress}: ${exerciseName} (${targetReps} ${unit})`, "fas fa-arrow-right");
-  speak(`Great job! Next exercise: ${exerciseName}. Target ${targetReps} ${unit}. You're doing amazing!`);
+  speak(`Great job! Next exercise: ${exerciseName}. Target ${targetReps} ${unit}. You are doing amazing!`);
   
   // Auto-start next exercise after 3 seconds
   setTimeout(() => {
@@ -1681,7 +1701,7 @@ function resetSession() {
 
   workoutState = camera ? 'preparing' : 'idle';
   
-  // Don't reset program if we're following one
+  // Only reset program if we're not following one
   if (!isFollowingProgram) {
     currentProgram = null;
     programExerciseIndex = 0;
@@ -1787,20 +1807,34 @@ function speak(text) {
   if (isMuted || !('speechSynthesis' in window)) return;
 
   window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
+  
+  // Clean up text for better pronunciation
+  let cleanText = text
+    .replace(/push-ups/gi, 'push ups')
+    .replace(/\b\d+s\b/g, (match) => {
+      const num = match.replace('s', '');
+      return `${num} seconds`;
+    })
+    .replace(/\b(\d+)\s*(reps?|rep)/gi, '$1 repetitions')
+    .replace(/🎉|🏆|✅|⭐|🚀|💪|🔥/g, '') // Remove emojis
+    .replace(/!/g, '.') // Replace exclamations with periods for better flow
+    .trim();
+  
+  const utter = new SpeechSynthesisUtterance(cleanText);
   utter.lang = 'en-US';
-  utter.volume = 0.9;
-  utter.rate = 0.85;
-  utter.pitch = 1.1;
+  utter.volume = 0.8;
+  utter.rate = 0.75; // Slower for better clarity
+  utter.pitch = 1.0;
 
-  // Try to use a more expressive voice
+  // Try to use a more natural voice
   const voices = window.speechSynthesis.getVoices();
   const preferredVoice = voices.find(voice =>
-    voice.name.includes('Google') ||
+    voice.name.includes('Natural') ||
     voice.name.includes('Enhanced') ||
-    voice.name.includes('Premium') ||
-    voice.name.includes('Neural')
-  );
+    voice.name.includes('Google') ||
+    voice.name.includes('Microsoft')
+  ) || voices.find(voice => voice.lang.startsWith('en'));
+  
   if (preferredVoice) {
     utter.voice = preferredVoice;
   }
@@ -1816,13 +1850,28 @@ resetButton.addEventListener('click', resetReps);
 focusModeBtn.addEventListener('click', () => {
   document.body.classList.toggle('focus-mode');
   const icon = focusModeBtn.querySelector('i');
-  if (document.body.classList.contains('focus-mode')) {
+  const isInFocusMode = document.body.classList.contains('focus-mode');
+  
+  if (isInFocusMode) {
     icon.classList.remove('fa-expand');
     icon.classList.add('fa-compress');
+    exitFocusBtn.style.display = 'block';
+    focusModeBtn.style.display = 'none';
   } else {
     icon.classList.remove('fa-compress');
     icon.classList.add('fa-expand');
+    exitFocusBtn.style.display = 'none';
+    focusModeBtn.style.display = 'block';
   }
+});
+
+exitFocusBtn.addEventListener('click', () => {
+  document.body.classList.remove('focus-mode');
+  const icon = focusModeBtn.querySelector('i');
+  icon.classList.remove('fa-compress');
+  icon.classList.add('fa-expand');
+  exitFocusBtn.style.display = 'none';
+  focusModeBtn.style.display = 'block';
 });
 
 themeToggleBtn.addEventListener('click', () => {
@@ -1927,16 +1976,146 @@ achievementsModal.addEventListener('click', (e) => {
   }
 });
 
+// Welcome overlay functionality
+getStartedBtn.addEventListener('click', () => {
+  welcomeOverlay.classList.add('hidden');
+  setTimeout(() => {
+    welcomeOverlay.style.display = 'none';
+  }, 500);
+});
+
+// Floating Action Button functionality
+fabMain.addEventListener('click', () => {
+  fabContainer.classList.toggle('active');
+});
+
+quickStartBtn.addEventListener('click', () => {
+  fabContainer.classList.remove('active');
+  startWorkoutFlow();
+});
+
+voiceCommandBtn.addEventListener('click', () => {
+  fabContainer.classList.remove('active');
+  toggleVoiceCommands();
+});
+
+helpTipsBtn.addEventListener('click', () => {
+  fabContainer.classList.remove('active');
+  showHelpModal();
+});
+
+// Close FAB when clicking outside
+document.addEventListener('click', (e) => {
+  if (!fabContainer.contains(e.target)) {
+    fabContainer.classList.remove('active');
+  }
+});
+
+// Voice command toggle function
+function toggleVoiceCommands() {
+  isMuted = !isMuted;
+  localStorage.setItem('muted', isMuted ? 'true' : 'false');
+  const icon = muteBtn.querySelector('i');
+  if (isMuted) {
+    icon.classList.remove('fa-volume-up');
+    icon.classList.add('fa-volume-mute');
+    window.speechSynthesis.cancel();
+    speak('Voice commands disabled.');
+  } else {
+    icon.classList.remove('fa-volume-mute');
+    icon.classList.add('fa-volume-up');
+    speak('Voice commands enabled! I\'m here to help you with your workout.');
+  }
+}
+
+// Help modal function
+function showHelpModal() {
+  const helpModal = document.createElement('div');
+  helpModal.className = 'modal-overlay active';
+  helpModal.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h2>🏋️ FitTracker AI Help</h2>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-content">
+        <h3>🚀 Quick Start Guide</h3>
+        <ol>
+          <li><strong>Allow Camera:</strong> Click "Allow" when prompted for camera access</li>
+          <li><strong>Choose Exercise:</strong> Select from 8 different exercises in the sidebar</li>
+          <li><strong>Start Workout:</strong> Click the "Start Workout" button</li>
+          <li><strong>Follow Guidance:</strong> Get into position and follow AI feedback</li>
+          <li><strong>Track Progress:</strong> Complete reps to unlock achievements!</li>
+        </ol>
+        
+        <h3>💡 Pro Tips</h3>
+        <ul>
+          <li>Ensure good lighting for better pose detection</li>
+          <li>Position yourself 3-6 feet from camera</li>
+          <li>Keep your full body visible during exercises</li>
+          <li>Listen to voice feedback for form improvements</li>
+          <li>Check workout history to track your progress</li>
+        </ul>
+        
+        <h3>🏆 Features</h3>
+        <ul>
+          <li><strong>Programs:</strong> Try preset workout routines</li>
+          <li><strong>History:</strong> View past workouts and statistics</li>
+          <li><strong>Achievements:</strong> Unlock rewards as you progress</li>
+          <li><strong>Form Feedback:</strong> Real-time tips to improve technique</li>
+        </ul>
+        
+        <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">
+          Got it! <i class="fas fa-thumbs-up"></i>
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(helpModal);
+  
+  // Remove modal when clicking outside
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) {
+      helpModal.remove();
+    }
+  });
+}
+
 // Initialize voices when available
+let voicesLoaded = false;
 if (window.speechSynthesis) {
-  window.speechSynthesis.onvoiceschanged = () => {
-    // Voices are now loaded
+  const loadVoices = () => {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0 && !voicesLoaded) {
+      voicesLoaded = true;
+      console.log('Speech voices loaded:', voices.length);
+    }
   };
+  
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices(); // Try loading immediately
+  
+  // Fallback: load voices after a delay
+  setTimeout(loadVoices, 1000);
 }
 
 // Initialize
 updateFeedback("Welcome to FitTracker AI", "Choose an exercise and start your journey!", "fas fa-rocket");
-speak("Welcome to FitTracker AI! Your personal trainer is ready to help you achieve your fitness goals! Choose an exercise and let's get started!");
+speak("Welcome to FitTracker AI! Your personal trainer is ready to help you achieve your fitness goals! Choose an exercise and let us get started!");
+
+// Check if user is returning (has workout history)
+const hasHistory = localStorage.getItem('fittracker-workout-history');
+if (hasHistory && JSON.parse(hasHistory).length > 0) {
+  // Hide welcome overlay for returning users
+  setTimeout(() => {
+    welcomeOverlay.classList.add('hidden');
+    setTimeout(() => {
+      welcomeOverlay.style.display = 'none';
+    }, 500);
+  }, 2000);
+}
 
 // Load workout history
 loadWorkoutHistory();
