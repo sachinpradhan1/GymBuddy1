@@ -1,0 +1,452 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FitTracker AI - Your Personal Trainer</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="brand">
+          <div class="brand-icon">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div class="brand-text">
+            <h1>FitTracker AI</h1>
+            <span>Personal Trainer</span>
+          </div>
+        </div>
+        <div class="header-controls">
+          <div class="header-stats">
+            <div class="stat-item">
+              <span class="stat-value" id="total-reps">0</span>
+              <span class="stat-label">Total Reps</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="total-calories">0</span>
+              <span class="stat-label">Calories</span>
+            </div>
+          </div>
+          <button class="btn-icon" id="theme-toggle-btn" title="Toggle Theme">
+            <i class="fas fa-moon"></i>
+          </button>
+          <button class="btn-icon" id="mute-btn" title="Mute">
+            <i class="fas fa-volume-up"></i>
+          </button>
+          <button class="btn-icon" id="history-btn" title="Workout History">
+            <i class="fas fa-history"></i>
+          </button>
+          <button class="btn-icon" id="achievements-btn" title="Achievements">
+            <i class="fas fa-trophy"></i>
+            <span class="notification-badge" id="achievement-badge" style="display: none;">!</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Exercise Selection Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h2>Exercises</h2>
+          <p>Choose your workout</p>
+          <div class="sidebar-controls">
+            <button class="btn-small btn-primary" id="programs-btn">
+              <i class="fas fa-list"></i>
+              Programs
+            </button>
+          </div>
+        </div>
+        
+        <div class="exercise-list">
+          <div class="exercise-card active" data-exercise="curl">
+            <div class="exercise-icon">
+              <i class="fas fa-dumbbell"></i>
+            </div>
+            <div class="exercise-details">
+              <h3>Bicep Curls</h3>
+              <p>Upper body strength</p>
+              <div class="exercise-meta">
+                <span><i class="fas fa-fire"></i> 0.5 cal/rep</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="exercise-card" data-exercise="squat">
+            <div class="exercise-icon">
+              <i class="fas fa-walking"></i>
+            </div>
+            <div class="exercise-details">
+              <h3>Squats</h3>
+              <p>Lower body power</p>
+              <div class="exercise-meta">
+                <span><i class="fas fa-fire"></i> 0.8 cal/rep</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="exercise-card" data-exercise="pushup">
+            <div class="exercise-icon">
+              <i class="fas fa-hand-point-up"></i>
+            </div>
+            <div class="exercise-details">
+              <h3>Push-ups</h3>
+              <p>Chest & triceps</p>
+              <div class="exercise-meta">
+                <span><i class="fas fa-fire"></i> 0.7 cal/rep</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="exercise-card" data-exercise="shoulderpress">
+            <div class="exercise-icon">
+              <i class="fas fa-angle-up"></i>
+            </div>
+            <div class="exercise-details">
+              <h3>Shoulder Press</h3>
+              <p>Shoulder strength</p>
+              <div class="exercise-meta">
+                <span><i class="fas fa-fire"></i> 0.6 cal/rep</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="exercise-card" data-exercise="jumpingjack">
+            <div class="exercise-icon">
+              <i class="fas fa-star"></i>
+            </div>
+            <div class="exercise-details">
+              <h3>Jumping Jacks</h3>
+              <p>Full body cardio</p>
+              <div class="exercise-meta">
+                <span><i class="fas fa-fire"></i> 0.9 cal/rep</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="exercise-card" data-exercise="lunge">
+            <div class="exercise-icon">
+              <i class="fas fa-walking"></i>
+            </div>
+            <div class="exercise-details">
+              <h3>Lunges</h3>
+              <p>Leg strength & balance</p>
+              <div class="exercise-meta">
+                <span><i class="fas fa-fire"></i> 0.7 cal/rep</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="exercise-card" data-exercise="plank">
+            <div class="exercise-icon">
+              <i class="fas fa-grip-horizontal"></i>
+            </div>
+            <div class="exercise-details">
+              <h3>Plank Hold</h3>
+              <p>Core stability</p>
+              <div class="exercise-meta">
+                <span><i class="fas fa-fire"></i> 0.3 cal/sec</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="exercise-card" data-exercise="burpee">
+            <div class="exercise-icon">
+              <i class="fas fa-bolt"></i>
+            </div>
+            <div class="exercise-details">
+              <h3>Burpees</h3>
+              <p>Full body explosive</p>
+              <div class="exercise-meta">
+                <span><i class="fas fa-fire"></i> 1.2 cal/rep</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Workout Area -->
+      <section class="workout-area">
+        <!-- Camera Feed -->
+        <div class="camera-section">
+          <div class="camera-header">
+            <h3>Live Workout</h3>
+            <button class="btn-icon" id="focus-mode-btn" title="Focus Mode">
+              <i class="fas fa-expand"></i>
+            </button>
+          </div>
+          <div class="camera-container">
+            <video id="video"></video>
+            <canvas id="canvas"></canvas>
+            <div class="camera-overlay">
+              <div class="pose-indicator" id="pose-indicator">
+                <i class="fas fa-user"></i>
+              </div>
+              <div class="form-feedback-overlay" id="form-feedback">
+                <div class="form-score-badge" id="form-score-badge">
+                  <span id="form-score-display">100</span>
+                  <small>FORM</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Live Stats -->
+          <div class="live-stats">
+            <div class="stat-box">
+              <div class="stat-number" id="current-reps">0</div>
+              <div class="stat-text">Current Reps</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-number" id="current-calories">0</div>
+              <div class="stat-text">Session Calories</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-number" id="form-score">100</div>
+              <div class="stat-text">Form Score</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feedback Panel -->
+        <div class="feedback-panel">
+          <div class="feedback-header">
+            <div class="feedback-icon" id="feedback-icon">
+              <i class="fas fa-play-circle"></i>
+            </div>
+            <div class="feedback-content">
+              <h3 id="feedback-title">Ready to Start</h3>
+              <p id="feedback-message">Select an exercise and begin your workout</p>
+            </div>
+          </div>
+          
+          <div class="progress-section">
+            <div class="progress-header">
+              <span>Progress</span>
+              <span id="progress-text">0/20</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="control-section">
+            <button class="btn btn-primary" id="start-btn">
+              <i class="fas fa-play"></i>
+              <span>Start Workout</span>
+            </button>
+            <button class="btn btn-secondary" id="stop-btn" disabled>
+              <i class="fas fa-stop"></i>
+              <span>Stop</span>
+            </button>
+            <button class="btn btn-warning" id="reset-reps-btn" disabled>
+              <i class="fas fa-undo"></i>
+              <span>Reset Reps</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Powered by <a href="https://www.linkedin.com/in/sachin-pradhan-ba82a927a" target="_blank" rel="noopener noreferrer">Sachin Pradhan</a></p>
+    </footer>
+  </div>
+
+  <!-- Demo Modal -->
+  <div class="modal-overlay" id="demo-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="demo-title">Exercise Demo</h2>
+        <button class="modal-close" id="close-demo">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-content">
+        <div class="video-wrapper">
+          <iframe id="demo-video" frameborder="0" allowfullscreen></iframe>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-primary" id="start-after-demo">
+            <i class="fas fa-play"></i>
+            Start Workout
+          </button>
+          <button class="btn btn-outline" id="skip-demo">
+            <i class="fas fa-forward"></i>
+            Skip Demo
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workout History Modal -->
+  <div class="modal-overlay" id="history-modal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2>Workout History</h2>
+        <button class="modal-close" id="close-history">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-content">
+        <div class="history-stats">
+          <div class="history-stat">
+            <div class="stat-number" id="total-workouts">0</div>
+            <div class="stat-label">Total Workouts</div>
+          </div>
+          <div class="history-stat">
+            <div class="stat-number" id="avg-duration">0m</div>
+            <div class="stat-label">Avg Duration</div>
+          </div>
+          <div class="history-stat">
+            <div class="stat-number" id="favorite-exercise">-</div>
+            <div class="stat-label">Favorite Exercise</div>
+          </div>
+        </div>
+        
+        <div class="history-controls">
+          <button class="btn btn-warning" id="clear-history-btn">
+            <i class="fas fa-trash"></i>
+            Clear History
+          </button>
+          <button class="btn btn-primary" id="export-history-btn">
+            <i class="fas fa-download"></i>
+            Export Data
+          </button>
+        </div>
+
+        <div class="history-list" id="workout-history-list">
+          <div class="history-empty" id="history-empty">
+            <i class="fas fa-dumbbell"></i>
+            <p>No workout history yet</p>
+            <span>Complete your first workout to see your progress!</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workout Programs Modal -->
+  <div class="modal-overlay" id="programs-modal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2>Workout Programs</h2>
+        <button class="modal-close" id="close-programs">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-content">
+        <div class="programs-tabs">
+          <button class="tab-btn active" data-tab="preset">Preset Programs</button>
+          <button class="tab-btn" data-tab="custom">Custom Workout</button>
+        </div>
+        
+        <div class="tab-content active" id="preset-tab">
+          <div class="programs-grid" id="programs-grid">
+            <!-- Programs will be populated by JavaScript -->
+          </div>
+        </div>
+        
+        <div class="tab-content" id="custom-tab">
+          <div class="custom-workout-builder">
+            <h3>Build Your Custom Workout</h3>
+            <p>Select exercises and set target reps to create your personalized routine.</p>
+            
+            <div class="custom-exercises" id="custom-exercises">
+              <!-- Custom exercise builder -->
+            </div>
+            
+            <div class="custom-controls">
+              <button class="btn btn-primary" id="start-custom-workout">
+                <i class="fas fa-play"></i>
+                Start Custom Workout
+              </button>
+              <button class="btn btn-secondary" id="save-custom-workout">
+                <i class="fas fa-save"></i>
+                Save Program
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Achievements Modal -->
+  <div class="modal-overlay" id="achievements-modal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2>Achievements & Progress</h2>
+        <button class="modal-close" id="close-achievements">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-content">
+        <div class="progress-dashboard">
+          <div class="progress-overview">
+            <div class="progress-card">
+              <div class="progress-icon">
+                <i class="fas fa-fire"></i>
+              </div>
+              <div class="progress-stats">
+                <div class="progress-number" id="streak-days">0</div>
+                <div class="progress-label">Day Streak</div>
+              </div>
+            </div>
+            <div class="progress-card">
+              <div class="progress-icon">
+                <i class="fas fa-chart-line"></i>
+              </div>
+              <div class="progress-stats">
+                <div class="progress-number" id="level-display">1</div>
+                <div class="progress-label">Fitness Level</div>
+              </div>
+            </div>
+            <div class="progress-card">
+              <div class="progress-icon">
+                <i class="fas fa-trophy"></i>
+              </div>
+              <div class="progress-stats">
+                <div class="progress-number" id="achievements-count">0</div>
+                <div class="progress-label">Achievements</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="level-progress">
+            <div class="level-info">
+              <h4>Fitness Level Progress</h4>
+              <p>Level <span id="current-level">1</span> - <span id="level-title">Beginner</span></p>
+            </div>
+            <div class="level-bar">
+              <div class="level-fill" id="level-fill" style="width: 0%"></div>
+            </div>
+            <div class="level-text">
+              <span id="current-xp">0</span> / <span id="next-level-xp">100</span> XP
+            </div>
+          </div>
+        </div>
+        
+        <div class="achievements-grid" id="achievements-grid">
+          <!-- Achievements will be populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
