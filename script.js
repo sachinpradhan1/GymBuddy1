@@ -1982,10 +1982,26 @@ achievementsModal.addEventListener('click', (e) => {
 
 // Welcome overlay functionality
 getStartedBtn.addEventListener('click', () => {
-  welcomeOverlay.classList.add('hidden');
-  setTimeout(() => {
+  console.log('Get Started button clicked!');
+  // Immediate hide for better responsiveness
+  welcomeOverlay.style.display = 'none';
+  console.log('Welcome overlay hidden immediately!');
+});
+
+// Alternative ways to close welcome overlay
+welcomeOverlay.addEventListener('click', (e) => {
+  if (e.target === welcomeOverlay) {
     welcomeOverlay.style.display = 'none';
-  }, 500);
+    console.log('Welcome overlay closed by clicking outside!');
+  }
+});
+
+// Close welcome overlay with Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && welcomeOverlay.style.display !== 'none') {
+    welcomeOverlay.style.display = 'none';
+    console.log('Welcome overlay closed with Escape key!');
+  }
 });
 
 // Floating Action Button functionality
@@ -2109,18 +2125,7 @@ if (window.speechSynthesis) {
 updateFeedback("Welcome to FitTracker AI", "Choose an exercise and start your journey!", "fas fa-rocket");
 speak("Welcome to FitTracker AI! Your personal trainer is ready to help you achieve your fitness goals! Choose an exercise and let us get started!");
 
-// Check if user is returning (has workout history)
-const hasHistory = localStorage.getItem('fittracker-workout-history');
-if (hasHistory && JSON.parse(hasHistory).length > 0) {
-  // Hide welcome overlay for returning users
-  setTimeout(() => {
-    welcomeOverlay.classList.add('hidden');
-    setTimeout(() => {
-      welcomeOverlay.style.display = 'none';
-    }, 500);
-  }, 2000);
-}
-
+// Welcome overlay stays visible until user clicks Get Started - no auto-hide
 // Load workout history
 loadWorkoutHistory();
 
