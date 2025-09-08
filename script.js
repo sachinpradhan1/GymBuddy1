@@ -61,14 +61,6 @@ const levelTitleElement = document.getElementById("level-title");
 const levelFillElement = document.getElementById("level-fill");
 const currentXpElement = document.getElementById("current-xp");
 const nextLevelXpElement = document.getElementById("next-level-xp");
-const welcomeOverlay = document.getElementById("welcome-overlay");
-const getStartedBtn = document.getElementById("get-started-btn");
-const fabContainer = document.getElementById("fab-container");
-const fabMain = document.getElementById("fab-main");
-const quickStartBtn = document.getElementById("quick-start");
-const voiceCommandBtn = document.getElementById("voice-command");
-const helpTipsBtn = document.getElementById("help-tips");
-const exitFocusBtn = document.getElementById("exit-focus-btn");
 
 // Variables for rep counting
 let repCount = 0;
@@ -95,11 +87,6 @@ let workoutHistory = [];
 let currentWorkoutData = null;
 let formFeedbackTimeout = null;
 let lastFormTip = null;
-
-let currentProgram = null;
-let customWorkoutPlan = [];
-let programExerciseIndex = 0;
-let isFollowingProgram = false;
 let currentProgram = null;
 let customWorkoutPlan = [];
 let programExerciseIndex = 0;
@@ -132,7 +119,7 @@ const demoVideos = {
 const exerciseData = {
   curl: { name: "bicep curls", calories: 0.5, type: "reps" },
   squat: { name: "squats", calories: 0.8, type: "reps" },
-  pushup: { name: "push ups", calories: 0.7, type: "reps" },
+  pushup: { name: "push-ups", calories: 0.7, type: "reps" },
   shoulderpress: { name: "shoulder press", calories: 0.6, type: "reps" },
   jumpingjack: { name: "jumping jacks", calories: 0.9, type: "reps" },
   lunge: { name: "lunges", calories: 0.7, type: "reps" },
@@ -599,12 +586,13 @@ function processExercise(landmarks) {
       updateFeedback("Performing Curl", `Perfect form! Angle: ${Math.round(angle)}°`, "fas fa-muscle");
     }
 
-    if (direction === "down" && angle < 60) {
+    if (angle > 160 && direction === "up") {
+      direction = "down";
+    }
+    if (angle < 60 && direction === "down") {
       direction = "up";
       incrementRep();
       updateFeedback("Excellent Curl!", "Perfect bicep contraction!", "fas fa-check-circle");
-    } else if (direction === "up" && angle > 160) {
-      direction = "down";
     }
 
   } else if (currentExercise === "squat") {
@@ -617,12 +605,13 @@ function processExercise(landmarks) {
       updateFeedback("Performing Squat", `Great depth! Angle: ${Math.round(angle)}°`, "fas fa-walking");
     }
 
-    if (direction === "down" && angle < 90) {
+    if (angle > 160 && direction === "up") {
+      direction = "down";
+    }
+    if (angle < 90 && direction === "down") {
       direction = "up";
       incrementRep();
       updateFeedback("Perfect Squat!", "Excellent depth and form!", "fas fa-check-circle");
-    } else if (direction === "up" && angle > 150) {
-      direction = "down";
     }
 
   } else if (currentExercise === "pushup") {
@@ -630,40 +619,46 @@ function processExercise(landmarks) {
     const elbow = lm[13];
     const wrist = lm[15];
     const hip = lm[23];
-    const knee = lm[25];
 
     const elbowAngle = calculateAngle(shoulder, elbow, wrist);
-    const bodyAngle = calculateAngle(shoulder, hip, knee);
     const bodyAlignment = Math.abs(shoulder.y - hip.y);
 
-    if (elbowAngle < 140 && elbowAngle > 60 && bodyAngle > 160 && bodyAlignment < 0.2) {
+    if (elbowAngle < 140 && elbowAngle > 60 && bodyAlignment < 0.2) {
       updateFeedback("Performing Push-up", `Excellent form! Depth: ${Math.round(elbowAngle)}°`, "fas fa-hand-point-up");
     }
 
-    if (direction === "down" && elbowAngle < 90 && bodyAngle > 160) {
+    if (elbowAngle > 140 && direction === "up") {
+      direction = "down";
+    }
+    if (elbowAngle < 90 && direction === "down") {
       direction = "up";
       incrementRep();
       updateFeedback("Amazing Push-up!", "Perfect chest engagement!", "fas fa-check-circle");
-    } else if (direction === "up" && elbowAngle > 160) {
-      direction = "down";
     }
 
   } else if (currentExercise === "shoulderpress") {
     const shoulder = lm[11];
     const elbow = lm[13];
     const wrist = lm[15];
+
+    // Calculate angle for shoulder press (elbow to shoulder to hip)
+    const hip = lm[23];
+    const shoulderAngle = calculateAngle(elbow, shoulder, hip);
+
+    // Also check arm extension (shoulder to elbow to wrist)
     const armAngle = calculateAngle(shoulder, elbow, wrist);
 
-    if (armAngle > 90 && armAngle < 170) {
+    if (shoulderAngle > 60 && shoulderAngle < 120 && armAngle > 90) {
       updateFeedback("Performing Shoulder Press", `Great form! Extension: ${Math.round(armAngle)}°`, "fas fa-angle-up");
     }
 
-    if (direction === "down" && armAngle > 160) {
+    if (armAngle < 90 && direction === "up") {
+      direction = "down";
+    }
+    if (armAngle > 160 && direction === "down") {
       direction = "up";
       incrementRep();
       updateFeedback("Perfect Press!", "Excellent shoulder strength!", "fas fa-check-circle");
-    } else if (direction === "up" && armAngle < 90) {
-      direction = "down";
     }
   } else if (currentExercise === "jumpingjack") {
     const leftShoulder = lm[11];
@@ -680,19 +675,15 @@ function processExercise(landmarks) {
     const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x);
 
     // Arms are up and feet are apart
-    if (leftShoulderAngle > 100 && rightShoulderAngle > 100 && feetDistance > shoulderWidth * 1.5) {
-      if (direction === "down") {
-        direction = "up";
-      }
+    if (leftShoulderAngle > 130 && rightShoulderAngle > 130 && feetDistance > shoulderWidth * 1.5 && direction === "down") {
+      direction = "up"; // "up" state for jumping jacks means arms are up
     }
 
     // Arms are down and feet are together
-    if (leftShoulderAngle < 45 && rightShoulderAngle < 45 && feetDistance < shoulderWidth * 1.2) {
-      if (direction === "up") {
-        direction = "down";
-        incrementRep();
-        updateFeedback("Great Jack!", "Keep the rhythm!", "fas fa-star");
-      }
+    if (leftShoulderAngle < 45 && rightShoulderAngle < 45 && feetDistance < shoulderWidth * 1.2 && direction === "up") {
+      direction = "down";
+      incrementRep();
+      updateFeedback("Great Jack!", "Keep the rhythm!", "fas fa-star");
     }
     
   } else if (currentExercise === "lunge") {
@@ -808,7 +799,6 @@ function calculateAngle(a, b, c) {
 function incrementRep() {
   repCount++;
   totalReps++;
-  
   const caloriesPerRep = exerciseData[currentExercise].calories;
   sessionCalories += caloriesPerRep;
   totalCalories += caloriesPerRep;
@@ -823,8 +813,6 @@ function incrementRep() {
   if (repCount > 0 && repCount % 5 === 0) {
     speak(`${repCount} reps! ${getEncouragementMessage()}`);
   }
-  
-  return true;
 }
 
 function getEncouragementMessage() {
@@ -903,7 +891,10 @@ function saveWorkoutToHistory() {
     calories: Math.round(sessionCalories * 10) / 10,
     formScore: Math.round(formScore),
     completed: repCount >= targetReps,
-    targetReps: targetReps
+    targetReps: targetReps,
+    // Ensure we have all required fields with defaults
+    exerciseName: currentWorkoutData.exerciseName || exerciseData[currentExercise]?.name || 'Unknown Exercise',
+    exercise: currentWorkoutData.exercise || currentExercise
   };
   
   // Load existing history
@@ -1064,26 +1055,41 @@ function exportWorkoutHistory() {
     return;
   }
   
-  // Create CSV content
-  const csvHeaders = 'Date,Exercise,Duration (seconds),Reps,Calories,Form Score,Completed,Target Reps\n';
+  // Create CSV content with proper data handling
+  const csvHeaders = 'Date,Time,Exercise,Duration (seconds),Reps,Calories,Form Score,Completed,Target Reps\n';
   const csvRows = workoutHistory.map(workout => {
-    const date = new Date(workout.startTime).toLocaleDateString();
-    return `${date},${workout.exerciseName},${workout.duration},${workout.reps},${workout.calories},${workout.formScore},${workout.completed},${workout.targetReps}`;
+    const date = new Date(workout.startTime);
+    const dateStr = date.toLocaleDateString();
+    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    // Ensure all data is properly formatted and sanitized
+    const exerciseName = (workout.exerciseName || 'Unknown').replace(/,/g, ';');
+    const duration = workout.duration || 0;
+    const reps = workout.reps || 0;
+    const calories = workout.calories || 0;
+    const formScore = workout.formScore || 0;
+    const completed = workout.completed ? 'Yes' : 'No';
+    const targetReps = workout.targetReps || 0;
+    
+    return `${dateStr},${timeStr},${exerciseName},${duration},${reps},${calories},${formScore},${completed},${targetReps}`;
   }).join('\n');
   
   const csvContent = csvHeaders + csvRows;
   
-  // Create and download file
+  // Create and download file with timestamp
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
+  
   if (link.download !== undefined) {
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `fittracker-history-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `fittracker-history-${timestamp}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url); // Clean up
   }
   
   speak('Workout history exported successfully.');
@@ -1381,11 +1387,11 @@ function nextProgramExercise() {
   
   if (programExerciseIndex >= currentProgram.exercises.length) {
     // Program completed
+    const completedProgramName = currentProgram.name; // Store name before clearing
     isFollowingProgram = false;
-    const programName = currentProgram.name;
     currentProgram = null;
-    updateFeedback("Program Complete!", `Congratulations! You've completed the entire ${programName} program!`, "fas fa-trophy");
-    speak(`Outstanding! You have completed the entire ${programName} workout program! You are absolutely incredible!`);
+    updateFeedback("Program Complete!", `🎉 Congratulations! You've completed the entire ${completedProgramName} program!`, "fas fa-trophy");
+    speak(`Outstanding! You've completed the entire workout program! You're absolutely incredible!`);
     return;
   }
   
@@ -1401,25 +1407,14 @@ function nextProgramExercise() {
     targetCard.classList.add('active');
   }
   
-  // Reset session but keep program state
-  repCount = 0;
-  sessionCalories = 0;
-  direction = "down";
-  formScore = 100;
-  plankStartTime = null;
-  plankCurrentTime = 0;
-  burpeeStage = 'standing';
-  workoutState = camera ? 'preparing' : 'idle';
-  
-  updateStats();
-  updateFormScore(100);
+  resetSession();
   
   const exerciseName = exerciseData[currentExercise].name;
   const unit = currentExercise === 'plank' ? 'seconds' : 'reps';
-  const progress = `Exercise ${programExerciseIndex + 1} of ${currentProgram.exercises.length}`;
+  const progress = `Exercise ${programExerciseIndex + 1}/${currentProgram.exercises.length}`;
   
   updateFeedback("Next Exercise", `${progress}: ${exerciseName} (${targetReps} ${unit})`, "fas fa-arrow-right");
-  speak(`Great job! Next exercise: ${exerciseName}. Target ${targetReps} ${unit}. You are doing amazing!`);
+  speak(`Great job! Next exercise: ${exerciseName}. Target ${targetReps} ${unit}. You're doing amazing!`);
   
   // Auto-start next exercise after 3 seconds
   setTimeout(() => {
@@ -1705,7 +1700,7 @@ function resetSession() {
 
   workoutState = camera ? 'preparing' : 'idle';
   
-  // Only reset program if we're not following one
+  // Don't reset program if we're following one
   if (!isFollowingProgram) {
     currentProgram = null;
     programExerciseIndex = 0;
@@ -1811,34 +1806,20 @@ function speak(text) {
   if (isMuted || !('speechSynthesis' in window)) return;
 
   window.speechSynthesis.cancel();
-  
-  // Clean up text for better pronunciation
-  let cleanText = text
-    .replace(/push-ups/gi, 'push ups')
-    .replace(/\b\d+s\b/g, (match) => {
-      const num = match.replace('s', '');
-      return `${num} seconds`;
-    })
-    .replace(/\b(\d+)\s*(reps?|rep)/gi, '$1 repetitions')
-    .replace(/🎉|🏆|✅|⭐|🚀|💪|🔥/g, '') // Remove emojis
-    .replace(/!/g, '.') // Replace exclamations with periods for better flow
-    .trim();
-  
-  const utter = new SpeechSynthesisUtterance(cleanText);
+  const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'en-US';
-  utter.volume = 0.8;
-  utter.rate = 0.75; // Slower for better clarity
-  utter.pitch = 1.0;
+  utter.volume = 0.9;
+  utter.rate = 0.85;
+  utter.pitch = 1.1;
 
-  // Try to use a more natural voice
+  // Try to use a more expressive voice
   const voices = window.speechSynthesis.getVoices();
   const preferredVoice = voices.find(voice =>
-    voice.name.includes('Natural') ||
-    voice.name.includes('Enhanced') ||
     voice.name.includes('Google') ||
-    voice.name.includes('Microsoft')
-  ) || voices.find(voice => voice.lang.startsWith('en'));
-  
+    voice.name.includes('Enhanced') ||
+    voice.name.includes('Premium') ||
+    voice.name.includes('Neural')
+  );
   if (preferredVoice) {
     utter.voice = preferredVoice;
   }
@@ -1854,28 +1835,13 @@ resetButton.addEventListener('click', resetReps);
 focusModeBtn.addEventListener('click', () => {
   document.body.classList.toggle('focus-mode');
   const icon = focusModeBtn.querySelector('i');
-  const isInFocusMode = document.body.classList.contains('focus-mode');
-  
-  if (isInFocusMode) {
+  if (document.body.classList.contains('focus-mode')) {
     icon.classList.remove('fa-expand');
     icon.classList.add('fa-compress');
-    exitFocusBtn.style.display = 'block';
-    focusModeBtn.style.display = 'none';
   } else {
     icon.classList.remove('fa-compress');
     icon.classList.add('fa-expand');
-    exitFocusBtn.style.display = 'none';
-    focusModeBtn.style.display = 'block';
   }
-});
-
-exitFocusBtn.addEventListener('click', () => {
-  document.body.classList.remove('focus-mode');
-  const icon = focusModeBtn.querySelector('i');
-  icon.classList.remove('fa-compress');
-  icon.classList.add('fa-expand');
-  exitFocusBtn.style.display = 'none';
-  focusModeBtn.style.display = 'block';
 });
 
 themeToggleBtn.addEventListener('click', () => {
@@ -1980,152 +1946,17 @@ achievementsModal.addEventListener('click', (e) => {
   }
 });
 
-// Welcome overlay functionality
-getStartedBtn.addEventListener('click', () => {
-  console.log('Get Started button clicked!');
-  // Immediate hide for better responsiveness
-  welcomeOverlay.style.display = 'none';
-  console.log('Welcome overlay hidden immediately!');
-});
-
-// Alternative ways to close welcome overlay
-welcomeOverlay.addEventListener('click', (e) => {
-  if (e.target === welcomeOverlay) {
-    welcomeOverlay.style.display = 'none';
-    console.log('Welcome overlay closed by clicking outside!');
-  }
-});
-
-// Close welcome overlay with Escape key
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && welcomeOverlay.style.display !== 'none') {
-    welcomeOverlay.style.display = 'none';
-    console.log('Welcome overlay closed with Escape key!');
-  }
-});
-
-// Floating Action Button functionality
-fabMain.addEventListener('click', () => {
-  fabContainer.classList.toggle('active');
-});
-
-quickStartBtn.addEventListener('click', () => {
-  fabContainer.classList.remove('active');
-  startWorkoutFlow();
-});
-
-voiceCommandBtn.addEventListener('click', () => {
-  fabContainer.classList.remove('active');
-  toggleVoiceCommands();
-});
-
-helpTipsBtn.addEventListener('click', () => {
-  fabContainer.classList.remove('active');
-  showHelpModal();
-});
-
-// Close FAB when clicking outside
-document.addEventListener('click', (e) => {
-  if (!fabContainer.contains(e.target)) {
-    fabContainer.classList.remove('active');
-  }
-});
-
-// Voice command toggle function
-function toggleVoiceCommands() {
-  isMuted = !isMuted;
-  localStorage.setItem('muted', isMuted ? 'true' : 'false');
-  const icon = muteBtn.querySelector('i');
-  if (isMuted) {
-    icon.classList.remove('fa-volume-up');
-    icon.classList.add('fa-volume-mute');
-    window.speechSynthesis.cancel();
-    speak('Voice commands disabled.');
-  } else {
-    icon.classList.remove('fa-volume-mute');
-    icon.classList.add('fa-volume-up');
-    speak('Voice commands enabled! I\'m here to help you with your workout.');
-  }
-}
-
-// Help modal function
-function showHelpModal() {
-  const helpModal = document.createElement('div');
-  helpModal.className = 'modal-overlay active';
-  helpModal.innerHTML = `
-    <div class="modal">
-      <div class="modal-header">
-        <h2>🏋️ FitTracker AI Help</h2>
-        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="modal-content">
-        <h3>🚀 Quick Start Guide</h3>
-        <ol>
-          <li><strong>Allow Camera:</strong> Click "Allow" when prompted for camera access</li>
-          <li><strong>Choose Exercise:</strong> Select from 8 different exercises in the sidebar</li>
-          <li><strong>Start Workout:</strong> Click the "Start Workout" button</li>
-          <li><strong>Follow Guidance:</strong> Get into position and follow AI feedback</li>
-          <li><strong>Track Progress:</strong> Complete reps to unlock achievements!</li>
-        </ol>
-        
-        <h3>💡 Pro Tips</h3>
-        <ul>
-          <li>Ensure good lighting for better pose detection</li>
-          <li>Position yourself 3-6 feet from camera</li>
-          <li>Keep your full body visible during exercises</li>
-          <li>Listen to voice feedback for form improvements</li>
-          <li>Check workout history to track your progress</li>
-        </ul>
-        
-        <h3>🏆 Features</h3>
-        <ul>
-          <li><strong>Programs:</strong> Try preset workout routines</li>
-          <li><strong>History:</strong> View past workouts and statistics</li>
-          <li><strong>Achievements:</strong> Unlock rewards as you progress</li>
-          <li><strong>Form Feedback:</strong> Real-time tips to improve technique</li>
-        </ul>
-        
-        <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">
-          Got it! <i class="fas fa-thumbs-up"></i>
-        </button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(helpModal);
-  
-  // Remove modal when clicking outside
-  helpModal.addEventListener('click', (e) => {
-    if (e.target === helpModal) {
-      helpModal.remove();
-    }
-  });
-}
-
 // Initialize voices when available
-let voicesLoaded = false;
 if (window.speechSynthesis) {
-  const loadVoices = () => {
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0 && !voicesLoaded) {
-      voicesLoaded = true;
-      console.log('Speech voices loaded:', voices.length);
-    }
+  window.speechSynthesis.onvoiceschanged = () => {
+    // Voices are now loaded
   };
-  
-  window.speechSynthesis.onvoiceschanged = loadVoices;
-  loadVoices(); // Try loading immediately
-  
-  // Fallback: load voices after a delay
-  setTimeout(loadVoices, 1000);
 }
 
 // Initialize
 updateFeedback("Welcome to FitTracker AI", "Choose an exercise and start your journey!", "fas fa-rocket");
-speak("Welcome to FitTracker AI! Your personal trainer is ready to help you achieve your fitness goals! Choose an exercise and let us get started!");
+speak("Welcome to FitTracker AI! Your personal trainer is ready to help you achieve your fitness goals! Choose an exercise and let's get started!");
 
-// Welcome overlay stays visible until user clicks Get Started - no auto-hide
 // Load workout history
 loadWorkoutHistory();
 
