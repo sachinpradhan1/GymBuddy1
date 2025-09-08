@@ -96,16 +96,10 @@ let currentWorkoutData = null;
 let formFeedbackTimeout = null;
 let lastFormTip = null;
 
-// Enhanced rep counting variables for stability
-let lastRepTime = 0;
-let minRepInterval = 600; // Minimum 600ms between reps (reduced for better responsiveness)
-let repStabilityFrames = 0;
-let requiredStabilityFrames = 3; // Need 3 consistent frames before counting (reduced)
-let lastAngleHistory = [];
-let angleHistorySize = 5; // Reduced for faster response
-let isInValidPosition = false;
-let positionHoldFrames = 0;
-let requiredHoldFrames = 2; // Need to hold position for 2 frames (reduced)
+let currentProgram = null;
+let customWorkoutPlan = [];
+let programExerciseIndex = 0;
+let isFollowingProgram = false;
 let currentProgram = null;
 let customWorkoutPlan = [];
 let programExerciseIndex = 0;
@@ -599,60 +593,36 @@ function processExercise(landmarks) {
     const shoulder = lm[11];
     const elbow = lm[13];
     const wrist = lm[15];
-    
-    // Check landmark stability first
-    if (!areLandmarksStable(lm)) {
-      repStabilityFrames = 0;
-      return;
-    }
-    
-    const angle = getSmoothedAngle(shoulder, elbow, wrist);
+    const angle = calculateAngle(shoulder, elbow, wrist);
 
     if (angle < 160 && angle > 60) {
       updateFeedback("Performing Curl", `Perfect form! Angle: ${Math.round(angle)}°`, "fas fa-muscle");
     }
 
-    // Simplified validation for bicep curls
-    if (direction === "down" && angle < 80) { // Curl up (flexed position)
-      if (validateRepMovement(angle, 70, 25)) {
-        direction = "up";
-        if (incrementRep()) {
-          updateFeedback("Excellent Curl!", "Perfect bicep contraction!", "fas fa-check-circle");
-        }
-      }
-    } else if (direction === "up" && angle > 150) { // Return to start (extended position)
+    if (direction === "down" && angle < 60) {
+      direction = "up";
+      incrementRep();
+      updateFeedback("Excellent Curl!", "Perfect bicep contraction!", "fas fa-check-circle");
+    } else if (direction === "up" && angle > 160) {
       direction = "down";
-      repStabilityFrames = 0; // Reset for next rep
     }
 
   } else if (currentExercise === "squat") {
     const hip = lm[23];
     const knee = lm[25];
     const ankle = lm[27];
-    
-    // Check landmark stability
-    if (!areLandmarksStable(lm)) {
-      repStabilityFrames = 0;
-      return;
-    }
-    
-    const angle = getSmoothedAngle(hip, knee, ankle);
+    const angle = calculateAngle(hip, knee, ankle);
 
     if (angle < 160 && angle > 90) {
       updateFeedback("Performing Squat", `Great depth! Angle: ${Math.round(angle)}°`, "fas fa-walking");
     }
 
-    // Simplified validation for squats
-    if (direction === "down" && angle < 110) { // Squat down (flexed position)
-      if (validateRepMovement(angle, 100, 30)) {
-        direction = "up";
-        if (incrementRep()) {
-          updateFeedback("Perfect Squat!", "Excellent depth and form!", "fas fa-check-circle");
-        }
-      }
-    } else if (direction === "up" && angle > 150) { // Return to standing
+    if (direction === "down" && angle < 90) {
+      direction = "up";
+      incrementRep();
+      updateFeedback("Perfect Squat!", "Excellent depth and form!", "fas fa-check-circle");
+    } else if (direction === "up" && angle > 150) {
       direction = "down";
-      repStabilityFrames = 0;
     }
 
   } else if (currentExercise === "pushup") {
@@ -660,64 +630,40 @@ function processExercise(landmarks) {
     const elbow = lm[13];
     const wrist = lm[15];
     const hip = lm[23];
+    const knee = lm[25];
 
-    // Check landmark stability
-    if (!areLandmarksStable(lm)) {
-      repStabilityFrames = 0;
-      return;
-    }
-
-    const elbowAngle = getSmoothedAngle(shoulder, elbow, wrist);
+    const elbowAngle = calculateAngle(shoulder, elbow, wrist);
+    const bodyAngle = calculateAngle(shoulder, hip, knee);
     const bodyAlignment = Math.abs(shoulder.y - hip.y);
 
-    if (elbowAngle < 140 && elbowAngle > 60 && bodyAlignment < 0.2) {
+    if (elbowAngle < 140 && elbowAngle > 60 && bodyAngle > 160 && bodyAlignment < 0.2) {
       updateFeedback("Performing Push-up", `Excellent form! Depth: ${Math.round(elbowAngle)}°`, "fas fa-hand-point-up");
     }
 
-    // Simplified validation for push-ups
-    if (direction === "down" && elbowAngle < 100) { // Push down (flexed position)
-      if (validateRepMovement(elbowAngle, 90, 25) && bodyAlignment < 0.25) {
-        direction = "up";
-        if (incrementRep()) {
-          updateFeedback("Amazing Push-up!", "Perfect chest engagement!", "fas fa-check-circle");
-        }
-      }
-    } else if (direction === "up" && elbowAngle > 130) { // Return to start
+    if (direction === "down" && elbowAngle < 90 && bodyAngle > 160) {
+      direction = "up";
+      incrementRep();
+      updateFeedback("Amazing Push-up!", "Perfect chest engagement!", "fas fa-check-circle");
+    } else if (direction === "up" && elbowAngle > 160) {
       direction = "down";
-      repStabilityFrames = 0;
     }
 
   } else if (currentExercise === "shoulderpress") {
     const shoulder = lm[11];
     const elbow = lm[13];
     const wrist = lm[15];
+    const armAngle = calculateAngle(shoulder, elbow, wrist);
 
-    // Check landmark stability
-    if (!areLandmarksStable(lm)) {
-      repStabilityFrames = 0;
-      return;
-    }
-
-    // Calculate angle for shoulder press (elbow to shoulder to hip)
-    const hip = lm[23];
-    const shoulderAngle = calculateAngle(elbow, shoulder, hip);
-
-    // Also check arm extension (shoulder to elbow to wrist)
-    const armAngle = getSmoothedAngle(shoulder, elbow, wrist);
-
-    if (shoulderAngle > 60 && shoulderAngle < 120 && armAngle > 90) {
+    if (armAngle > 90 && armAngle < 170) {
       updateFeedback("Performing Shoulder Press", `Great form! Extension: ${Math.round(armAngle)}°`, "fas fa-angle-up");
     }
 
-    // Enhanced validation for shoulder press
-    if (direction === "down" && validateRepMovement(armAngle, 160, 20)) {
+    if (direction === "down" && armAngle > 160) {
       direction = "up";
-      if (incrementRep()) {
-        updateFeedback("Perfect Press!", "Excellent shoulder strength!", "fas fa-check-circle");
-      }
-    } else if (direction === "up" && armAngle < 100) {
+      incrementRep();
+      updateFeedback("Perfect Press!", "Excellent shoulder strength!", "fas fa-check-circle");
+    } else if (direction === "up" && armAngle < 90) {
       direction = "down";
-      repStabilityFrames = 0;
     }
   } else if (currentExercise === "jumpingjack") {
     const leftShoulder = lm[11];
@@ -727,45 +673,26 @@ function processExercise(landmarks) {
     const leftAnkle = lm[27];
     const rightAnkle = lm[28];
 
-    // Check landmark stability
-    if (!areLandmarksStable(lm)) {
-      repStabilityFrames = 0;
-      return;
-    }
-
-    const leftShoulderAngle = getSmoothedAngle(lm[13], leftShoulder, leftHip);
-    const rightShoulderAngle = getSmoothedAngle(lm[14], rightShoulder, rightHip);
+    const leftShoulderAngle = calculateAngle(lm[13], leftShoulder, leftHip);
+    const rightShoulderAngle = calculateAngle(lm[14], rightShoulder, rightHip);
 
     const feetDistance = Math.abs(leftAnkle.x - rightAnkle.x);
     const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x);
 
-    // Arms are up and feet are apart - enhanced validation
-    if (leftShoulderAngle > 130 && rightShoulderAngle > 130 && feetDistance > shoulderWidth * 1.5) {
+    // Arms are up and feet are apart
+    if (leftShoulderAngle > 100 && rightShoulderAngle > 100 && feetDistance > shoulderWidth * 1.5) {
       if (direction === "down") {
-        positionHoldFrames++;
-        if (positionHoldFrames >= requiredHoldFrames) {
-          direction = "up";
-          positionHoldFrames = 0;
-        }
+        direction = "up";
       }
-    } else {
-      positionHoldFrames = 0;
     }
 
-    // Arms are down and feet are together - enhanced validation
+    // Arms are down and feet are together
     if (leftShoulderAngle < 45 && rightShoulderAngle < 45 && feetDistance < shoulderWidth * 1.2) {
       if (direction === "up") {
-        positionHoldFrames++;
-        if (positionHoldFrames >= requiredHoldFrames) {
-          direction = "down";
-          positionHoldFrames = 0;
-          if (incrementRep()) {
-            updateFeedback("Great Jack!", "Keep the rhythm!", "fas fa-star");
-          }
-        }
+        direction = "down";
+        incrementRep();
+        updateFeedback("Great Jack!", "Keep the rhythm!", "fas fa-star");
       }
-    } else if (direction === "up") {
-      positionHoldFrames = 0;
     }
     
   } else if (currentExercise === "lunge") {
@@ -776,42 +703,23 @@ function processExercise(landmarks) {
     const rightKnee = lm[26];
     const rightAnkle = lm[28];
 
-    // Check landmark stability
-    if (!areLandmarksStable(lm)) {
-      repStabilityFrames = 0;
-      return;
-    }
-
-    const leftKneeAngle = getSmoothedAngle(leftHip, leftKnee, leftAnkle);
-    const rightKneeAngle = getSmoothedAngle(rightHip, rightKnee, rightAnkle);
+    const leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
+    const rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
     
     // Check if in lunge position (one knee bent significantly more than the other)
     const inLungePosition = (leftKneeAngle < 110 && rightKneeAngle > 150) || (rightKneeAngle < 110 && leftKneeAngle > 150);
     const inStandingPosition = leftKneeAngle > 160 && rightKneeAngle > 160;
 
     if (inLungePosition && direction === "down") {
-      positionHoldFrames++;
-      if (positionHoldFrames >= requiredHoldFrames) {
-        updateFeedback("Great Lunge!", "Perfect depth! Push back up!", "fas fa-walking");
-        direction = "up";
-        formScore = Math.min(100, formScore + 0.5);
-        positionHoldFrames = 0;
-      }
-    } else if (direction === "down") {
-      positionHoldFrames = 0;
+      updateFeedback("Great Lunge!", "Perfect depth! Push back up!", "fas fa-walking");
+      direction = "up";
+      formScore = Math.min(100, formScore + 0.5);
     }
     
     if (inStandingPosition && direction === "up") {
-      positionHoldFrames++;
-      if (positionHoldFrames >= requiredHoldFrames) {
-        direction = "down";
-        positionHoldFrames = 0;
-        if (incrementRep()) {
-          updateFeedback("Excellent Lunge!", "Great balance and control!", "fas fa-check-circle");
-        }
-      }
-    } else if (direction === "up") {
-      positionHoldFrames = 0;
+      direction = "down";
+      incrementRep();
+      updateFeedback("Excellent Lunge!", "Great balance and control!", "fas fa-check-circle");
     }
     
   } else if (currentExercise === "plank") {
@@ -855,58 +763,34 @@ function processExercise(landmarks) {
     const shoulder = lm[11];
     const elbow = lm[13];
     
-    // Check landmark stability
-    if (!areLandmarksStable(lm)) {
-      return;
-    }
-    
-    const kneeAngle = getSmoothedAngle(hip, knee, ankle);
+    const kneeAngle = calculateAngle(hip, knee, ankle);
     const bodyHeight = Math.abs(shoulder.y - ankle.y);
-    const armAngle = getSmoothedAngle(lm[11], lm[13], lm[15]);
+    const armAngle = calculateAngle(lm[11], lm[13], lm[15]);
     
     switch (burpeeStage) {
       case 'standing':
         if (kneeAngle < 120) {
-          positionHoldFrames++;
-          if (positionHoldFrames >= requiredHoldFrames) {
-            burpeeStage = 'squat';
-            positionHoldFrames = 0;
-            updateFeedback("Burpee - Squat", "Good! Now jump back to plank!", "fas fa-arrow-down");
-          }
-        } else {
-          positionHoldFrames = 0;
+          burpeeStage = 'squat';
+          updateFeedback("Burpee - Squat", "Good! Now jump back to plank!", "fas fa-arrow-down");
         }
         break;
       case 'squat':
         if (armAngle > 160 && bodyHeight < 0.8) {
-          positionHoldFrames++;
-          if (positionHoldFrames >= requiredHoldFrames) {
-            burpeeStage = 'plank';
-            positionHoldFrames = 0;
-            updateFeedback("Burpee - Plank", "Perfect! Now jump back up!", "fas fa-grip-horizontal");
-          }
-        } else {
-          positionHoldFrames = 0;
+          burpeeStage = 'plank';
+          updateFeedback("Burpee - Plank", "Perfect! Now jump back up!", "fas fa-grip-horizontal");
         }
         break;
       case 'plank':
         if (kneeAngle < 120 && bodyHeight > 0.8) {
-          positionHoldFrames++;
-          if (positionHoldFrames >= requiredHoldFrames) {
-            burpeeStage = 'jump';
-            positionHoldFrames = 0;
-            updateFeedback("Burpee - Jump Ready", "Jump up high!", "fas fa-arrow-up");
-          }
-        } else {
-          positionHoldFrames = 0;
+          burpeeStage = 'jump';
+          updateFeedback("Burpee - Jump Ready", "Jump up high!", "fas fa-arrow-up");
         }
         break;
       case 'jump':
         if (kneeAngle > 160 && bodyHeight > 1.0) {
           burpeeStage = 'standing';
-          if (incrementRep()) {
-            updateFeedback("Amazing Burpee!", "Full body power!", "fas fa-bolt");
-          }
+          incrementRep();
+          updateFeedback("Amazing Burpee!", "Full body power!", "fas fa-bolt");
         }
         break;
     }
@@ -921,89 +805,9 @@ function calculateAngle(a, b, c) {
   return angle > 180 ? 360 - angle : angle;
 }
 
-// Enhanced angle calculation with smoothing
-function getSmoothedAngle(a, b, c) {
-  const currentAngle = calculateAngle(a, b, c);
-  
-  // Add to history
-  lastAngleHistory.push(currentAngle);
-  if (lastAngleHistory.length > angleHistorySize) {
-    lastAngleHistory.shift();
-  }
-  
-  // Return moving average for smoothing
-  if (lastAngleHistory.length >= 2) {
-    const sum = lastAngleHistory.reduce((a, b) => a + b, 0);
-    return sum / lastAngleHistory.length;
-  }
-  
-  return currentAngle;
-}
-
-// Enhanced rep validation function
-function validateRepMovement(currentAngle, targetAngle, threshold) {
-  const currentTime = Date.now();
-  
-  // Check minimum time between reps
-  if (currentTime - lastRepTime < minRepInterval) {
-    return false;
-  }
-  
-  // Check if angle meets threshold
-  const angleInRange = Math.abs(currentAngle - targetAngle) < threshold;
-  
-  if (angleInRange) {
-    repStabilityFrames++;
-    // Return true immediately when angle is in range - let incrementRep handle final validation
-    return true;
-  } else {
-    repStabilityFrames = 0;
-  }
-  
-  return false;
-}
-
-// Check if landmarks are stable and confident
-function areLandmarksStable(landmarks) {
-  if (!landmarks) return false;
-  
-  // Check visibility of key landmarks with lower threshold for better responsiveness
-  const keyLandmarks = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
-  for (let i of keyLandmarks) {
-    if (!landmarks[i] || landmarks[i].visibility < 0.5) { // Reduced from 0.6 to 0.5
-      return false;
-    }
-  }
-  
-  return true;
-}
-
-// Reset validation variables
-function resetRepValidation() {
-  repStabilityFrames = 0;
-  lastAngleHistory = [];
-  isInValidPosition = false;
-  positionHoldFrames = 0;
-  lastRepTime = 0;
-}
-
 function incrementRep() {
-  const currentTime = Date.now();
-  
-  // Prevent too frequent rep counting
-  if (currentTime - lastRepTime < minRepInterval) {
-    return false;
-  }
-  
-  // Only count if we have enough stability frames
-  if (repStabilityFrames < requiredStabilityFrames) {
-    return false;
-  }
-  
   repCount++;
   totalReps++;
-  lastRepTime = currentTime;
-  repStabilityFrames = 0; // Reset stability counter
   
   const caloriesPerRep = exerciseData[currentExercise].calories;
   sessionCalories += caloriesPerRep;
@@ -1891,9 +1695,6 @@ function resetSession() {
   plankStartTime = null;
   plankCurrentTime = 0;
   burpeeStage = 'standing';
-
-  // Reset enhanced validation variables
-  resetRepValidation();
 
   clearTimeout(readyTimeoutId);
   clearTimeout(pauseTimeoutId);
