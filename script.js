@@ -98,14 +98,14 @@ let lastFormTip = null;
 
 // Enhanced rep counting variables for stability
 let lastRepTime = 0;
-let minRepInterval = 800; // Minimum 800ms between reps
+let minRepInterval = 600; // Minimum 600ms between reps (reduced for better responsiveness)
 let repStabilityFrames = 0;
-let requiredStabilityFrames = 5; // Need 5 consistent frames before counting
+let requiredStabilityFrames = 3; // Need 3 consistent frames before counting (reduced)
 let lastAngleHistory = [];
-let angleHistorySize = 10;
+let angleHistorySize = 5; // Reduced for faster response
 let isInValidPosition = false;
 let positionHoldFrames = 0;
-let requiredHoldFrames = 3; // Need to hold position for 3 frames
+let requiredHoldFrames = 2; // Need to hold position for 2 frames (reduced)
 let currentProgram = null;
 let customWorkoutPlan = [];
 let programExerciseIndex = 0;
@@ -612,13 +612,15 @@ function processExercise(landmarks) {
       updateFeedback("Performing Curl", `Perfect form! Angle: ${Math.round(angle)}°`, "fas fa-muscle");
     }
 
-    // Enhanced validation for bicep curls
-    if (direction === "down" && validateRepMovement(angle, 60, 15)) {
-      direction = "up";
-      if (incrementRep()) {
-        updateFeedback("Excellent Curl!", "Perfect bicep contraction!", "fas fa-check-circle");
+    // Simplified validation for bicep curls
+    if (direction === "down" && angle < 80) { // Curl up (flexed position)
+      if (validateRepMovement(angle, 70, 25)) {
+        direction = "up";
+        if (incrementRep()) {
+          updateFeedback("Excellent Curl!", "Perfect bicep contraction!", "fas fa-check-circle");
+        }
       }
-    } else if (direction === "up" && angle > 150) {
+    } else if (direction === "up" && angle > 150) { // Return to start (extended position)
       direction = "down";
       repStabilityFrames = 0; // Reset for next rep
     }
@@ -640,13 +642,15 @@ function processExercise(landmarks) {
       updateFeedback("Performing Squat", `Great depth! Angle: ${Math.round(angle)}°`, "fas fa-walking");
     }
 
-    // Enhanced validation for squats
-    if (direction === "down" && validateRepMovement(angle, 90, 20)) {
-      direction = "up";
-      if (incrementRep()) {
-        updateFeedback("Perfect Squat!", "Excellent depth and form!", "fas fa-check-circle");
+    // Simplified validation for squats
+    if (direction === "down" && angle < 110) { // Squat down (flexed position)
+      if (validateRepMovement(angle, 100, 30)) {
+        direction = "up";
+        if (incrementRep()) {
+          updateFeedback("Perfect Squat!", "Excellent depth and form!", "fas fa-check-circle");
+        }
       }
-    } else if (direction === "up" && angle > 150) {
+    } else if (direction === "up" && angle > 150) { // Return to standing
       direction = "down";
       repStabilityFrames = 0;
     }
@@ -670,13 +674,15 @@ function processExercise(landmarks) {
       updateFeedback("Performing Push-up", `Excellent form! Depth: ${Math.round(elbowAngle)}°`, "fas fa-hand-point-up");
     }
 
-    // Enhanced validation for push-ups
-    if (direction === "down" && validateRepMovement(elbowAngle, 90, 20) && bodyAlignment < 0.25) {
-      direction = "up";
-      if (incrementRep()) {
-        updateFeedback("Amazing Push-up!", "Perfect chest engagement!", "fas fa-check-circle");
+    // Simplified validation for push-ups
+    if (direction === "down" && elbowAngle < 100) { // Push down (flexed position)
+      if (validateRepMovement(elbowAngle, 90, 25) && bodyAlignment < 0.25) {
+        direction = "up";
+        if (incrementRep()) {
+          updateFeedback("Amazing Push-up!", "Perfect chest engagement!", "fas fa-check-circle");
+        }
       }
-    } else if (direction === "up" && elbowAngle > 130) {
+    } else if (direction === "up" && elbowAngle > 130) { // Return to start
       direction = "down";
       repStabilityFrames = 0;
     }
@@ -926,7 +932,7 @@ function getSmoothedAngle(a, b, c) {
   }
   
   // Return moving average for smoothing
-  if (lastAngleHistory.length >= 3) {
+  if (lastAngleHistory.length >= 2) {
     const sum = lastAngleHistory.reduce((a, b) => a + b, 0);
     return sum / lastAngleHistory.length;
   }
@@ -948,9 +954,8 @@ function validateRepMovement(currentAngle, targetAngle, threshold) {
   
   if (angleInRange) {
     repStabilityFrames++;
-    if (repStabilityFrames >= requiredStabilityFrames) {
-      return true;
-    }
+    // Return true immediately when angle is in range - let incrementRep handle final validation
+    return true;
   } else {
     repStabilityFrames = 0;
   }
@@ -962,10 +967,10 @@ function validateRepMovement(currentAngle, targetAngle, threshold) {
 function areLandmarksStable(landmarks) {
   if (!landmarks) return false;
   
-  // Check visibility of key landmarks
+  // Check visibility of key landmarks with lower threshold for better responsiveness
   const keyLandmarks = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
   for (let i of keyLandmarks) {
-    if (!landmarks[i] || landmarks[i].visibility < 0.6) {
+    if (!landmarks[i] || landmarks[i].visibility < 0.5) { // Reduced from 0.6 to 0.5
       return false;
     }
   }
